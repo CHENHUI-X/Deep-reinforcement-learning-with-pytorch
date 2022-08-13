@@ -34,7 +34,7 @@ class Policy(nn.Module):
     def __init__(self):
         super(Policy, self).__init__()
         self.affine1 = nn.Linear(4, 128)
-        self.affine2 = nn.Linear(128, 2)
+        self.affine2 = nn.Linear(128, 2) # 0 for left , 1 for right
 
         self.saved_log_probs = []
         self.rewards = []
@@ -52,9 +52,10 @@ eps = np.finfo(np.float32).eps.item()
 
 def select_action(state):
     state = torch.from_numpy(state).float().unsqueeze(0)
-    probs = policy(state)
-    m = Categorical(probs)
-    action = m.sample()
+    probs = policy(state) # prob
+
+    m = Categorical(probs) # create a category distribution according pro
+    action = m.sample() # sample an action from distribution ,output 0 or 1
     policy.saved_log_probs.append(m.log_prob(action))
     return action.item()
 
@@ -65,14 +66,15 @@ def finish_episode():
     rewards = []
     for r in policy.rewards[::-1]:
         R = r + args.gamma * R
-        rewards.insert(0, R)
+        # gama^n * r1 + gama^(n-1) * r2 + ... + gama^0 * rn
+        rewards.insert(0, R) # 保证最开始的action得到的reward在最前边
     rewards = torch.tensor(rewards)
     rewards = (rewards - rewards.mean()) / (rewards.std() + eps)
     for log_prob, reward in zip(policy.saved_log_probs, rewards):
         policy_loss.append(-log_prob * reward)
     optimizer.zero_grad()
     policy_loss = torch.cat(policy_loss).sum()
-    policy_loss.backward()
+    policy_loss.backward() # -min <=> +max , 所以 -log_prob
     optimizer.step()
     del policy.rewards[:]
     del policy.saved_log_probs[:]
@@ -80,18 +82,21 @@ def finish_episode():
 
 def main():
     running_reward = 10
-    for i_episode in count(1):
+    for i_episode in count(1): # 无限循环
         state = env.reset()
-        for t in range(10000):  # Don't infinite loop while learning
+        for t in range(100):
+            # Don't infinite loop while learning
             action = select_action(state)
             state, reward, done, _ = env.step(action)
             if args.render:
                 env.render()
             policy.rewards.append(reward)
+            # 将当前episode的每一个action的reward都记录
             if done:
                 break
 
         running_reward = running_reward * 0.99 + t * 0.01
+
         finish_episode()
         if i_episode % args.log_interval == 0:
             print('Episode {}\tLast length: {:5d}\tAverage length: {:.2f}'.format(

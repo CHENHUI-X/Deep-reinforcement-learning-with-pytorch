@@ -139,7 +139,7 @@ class PPO():
                 
                 L1 = ratio * advantage[index]
                 L2 = torch.clamp(ratio, 1-self.clip_param, 1+self.clip_param) * advantage[index]
-                action_loss = -torch.min(L1, L2).mean() # MAX->MIN desent
+                action_loss = -torch.min(L1, L2).mean() # MAX -> MIN desent
                 self.actor_optimizer.zero_grad()
                 action_loss.backward()
                 nn.utils.clip_grad_norm_(self.actor_net.parameters(), self.max_grad_norm)

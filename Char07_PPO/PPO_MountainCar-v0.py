@@ -14,7 +14,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.distributions import Normal, Categorical
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
-from tensorboardX import SummaryWriter
+# from tensorboardX import SummaryWriter
 
 # Parameters
 env_name = 'MountainCar-v0'
@@ -47,7 +47,7 @@ class Critic(nn.Module):
     def __init__(self):
         super(Critic, self).__init__()
         self.fc1 = nn.Linear(num_state, 128)
-        self.state_value = nn.Linear(128, 1)
+        self.state_value = nn.Linear(128, 1) # 预测该state可能得到的分数
 
     def forward(self, x):
         x = F.relu(self.fc1(x))
@@ -69,13 +69,13 @@ class PPO():
         self.buffer = []
         self.counter = 0
         self.training_step = 0
-        self.writer = SummaryWriter('../exp')
+        # self.writer = SummaryWriter('../exp')
 
         self.actor_optimizer = optim.Adam(self.actor_net.parameters(), 1e-3)
         self.critic_net_optimizer = optim.Adam(self.critic_net.parameters(), 3e-3)
-        if not os.path.exists('../param'):
-            os.makedirs('../param/net_param')
-            os.makedirs('../param/img')
+        # if not os.path.exists('../param'):
+        #     os.makedirs('../param/net_param')
+        #     os.makedirs('../param/img')
 
     def select_action(self, state):
         state = torch.from_numpy(state).float().unsqueeze(0)

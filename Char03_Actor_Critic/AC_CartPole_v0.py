@@ -35,7 +35,10 @@ class Policy(nn.Module):
         self.fc1 = nn.Linear(state_space, 32)
 
         self.action_head = nn.Linear(32, action_space)
-        self.value_head = nn.Linear(32, 1) # Scalar Value
+        # return action  a(t)
+        self.value_head = nn.Linear(32, 1)
+        # return pred reward based on  current action ( a(t) ) , which is v(St+1)
+
 
         self.save_actions = []
         self.rewards = []
@@ -66,12 +69,15 @@ def plot(steps):
         plt.savefig(path)
     plt.pause(0.0000001)
 
-def select_action(state):
+def select_action(state): # input : state of t
     state = torch.from_numpy(state).float()
     probs, state_value = model(state)
+    # out : probs of  action ( a(t) ) with state of t  , and V(St)
     m = Categorical(probs)
     action = m.sample()
-    model.save_actions.append(SavedAction(m.log_prob(action), state_value))
+    model.save_actions.append(
+        SavedAction( m.log_prob(action), state_value )
+    ) # save the prob  with current action , and V(St)
 
     return action.item()
 
@@ -111,7 +117,8 @@ def main():
         for t in count():
             action = select_action(state)
             state, reward, done, info = env.step(action)
-            if render: env.render()
+            # reward : r(t) of based on a(t)
+            if render :  env.render()
             model.rewards.append(reward)
 
             if done or t >= 1000:
@@ -119,9 +126,9 @@ def main():
         running_reward = running_reward * 0.99 + t * 0.01
         live_time.append(t)
         plot(live_time)
-        if i_episode % 100 == 0:
-            modelPath = './AC_CartPole_Model/ModelTraing'+str(i_episode)+'Times.pkl'
-            torch.save(model, modelPath)
+        # if i_episode % 100 == 0:
+        #     modelPath = './AC_CartPole_Model/ModelTraing'+str(i_episode)+'Times.pkl'
+        #     torch.save(model, modelPath)
         finish_episode()
 
 if __name__ == '__main__':

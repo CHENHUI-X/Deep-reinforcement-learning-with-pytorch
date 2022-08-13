@@ -59,7 +59,6 @@ def selct_action(state):
     c = Categorical(probs)
     action = c.sample()
 
-
     policy.saved_log_probs.append(c.log_prob(action))
     action = action.item()
     return action
@@ -87,7 +86,6 @@ def finish_episode():
     optimizer.step()
 
 
-
     del policy.rewards[:]
     del policy.saved_log_probs[:]
 
@@ -105,7 +103,6 @@ def plot(steps):
     plt.pause(0.0000001)
 
 
-
 def main():
 
     running_reward = 0
@@ -115,6 +112,7 @@ def main():
 
         for t in range(10000):
             action = selct_action(state)
+            print(env.step(action))
             state, reward ,done, info = env.step(action)
             env.render()
             policy.rewards.append(reward)

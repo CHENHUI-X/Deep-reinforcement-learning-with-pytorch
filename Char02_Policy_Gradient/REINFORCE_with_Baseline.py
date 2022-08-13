@@ -26,12 +26,12 @@ class Policy(nn.Module):
         self.linear1 = nn.Linear(n_states, n_hidden)
         self.linear2 = nn.Linear(n_hidden, n_output)
 
- #这是policy的参数
+        #这是policy的参数
         self.reward = []
         self.log_act_probs = []
         self.Gt = []
         self.sigma = []
-#这是state_action_func的参数
+        #这是state_action_func的参数
         # self.Reward = []
         # self.s_value = []
 
@@ -75,7 +75,8 @@ def loop_episode():
     state_sequence = []
     log_act_prob = []
     for t in range(1000):
-        state = torch.from_numpy(state).unsqueeze(0).float()  # 在第0维增加一个维度，将数据组织成[N , .....] 形式
+        state = torch.from_numpy(state).unsqueeze(0).float()
+        # 在第0维增加一个维度，将数据组织成[N , .....] 形式
         state_sequence.append(deepcopy(state))
         action_probs = policy(state)
         m = Categorical(action_probs)
@@ -102,11 +103,8 @@ def loop_episode():
         # s_value_func.sigma.insert(0,sigma)
         # policy.Gt.insert(0,R)
 
-
     # update step by step
     for i in range(len(Gt)):
-
-
 
         G = Gt[i]
         V = s_value_func(state_sequence[i])

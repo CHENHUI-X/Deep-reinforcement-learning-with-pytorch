@@ -34,7 +34,12 @@ def plot_durations(episode_durations):
 
     if len(duration_t) >= 100:
         means = duration_t.unfold(0,100,1).mean(1).view(-1)
-        means = torch.cat((torch.zeros(99), means))
+        # 滑动窗口, (dim,kernelsize,step) , 计算移动平均
+        # 参考 :https://fesian.blog.csdn.net/article/details/88139435
+
+        # 随着len(episode_durations)增加,得到的窗口越来越多
+        means = torch.cat((torch.zeros(99), means)) # 前100个episode 都看做0
+        print(means.shape)
         plt.plot(means.numpy())
 
     plt.pause(0.00001)
@@ -60,7 +65,6 @@ class Policy(nn.Module):
 
 policy = Policy()
 optimizer = torch.optim.Adam(policy.parameters(), lr=learning_rate)
-
 
 
 def train():
@@ -100,12 +104,12 @@ def train():
             steps += 1
 
             if done:
-                episode_durations.append(t+1)
+                episode_durations.append(t+1) # 记录动作保持次数
                 plot_durations(episode_durations)
                 break
 
         # update policy
-        if episode >0 and episode % batch_size == 0:
+        if episode > 0 and episode % batch_size == 0:
 
             r = 0
             '''
