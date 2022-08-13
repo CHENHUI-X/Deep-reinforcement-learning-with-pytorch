@@ -71,6 +71,8 @@ def finish_episode():
     for r in policy.rewards[::-1]:
         R = r + policy.gamma * R
         rewards.insert(0, R)
+        # 保证最开始的action得到的reward在最前边
+        # 那么 rewards 中每一个元素 就是存储 该节点 所采取相应行动后,得到的累计奖励
 
     # Formalize reward
     rewards = torch.tensor(rewards)

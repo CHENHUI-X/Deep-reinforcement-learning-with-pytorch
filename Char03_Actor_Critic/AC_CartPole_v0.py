@@ -63,9 +63,9 @@ def plot(steps):
     ax.plot(steps)
     RunTime = len(steps)
 
-    path = './AC_CartPole-v0/' + 'RunTime' + str(RunTime) + '.jpg'
-    if len(steps) % 200 == 0:
-        plt.savefig(path)
+    # path = './AC_CartPole-v0/' + 'RunTime' + str(RunTime) + '.jpg'
+    # if len(steps) % 200 == 0:
+    #     plt.savefig(path)
     plt.pause(0.0000001)
 
 def select_action(state): # input : state of t
@@ -92,6 +92,8 @@ def finish_episode():
     for r in model.rewards[::-1]:
         R = r + gamma * R
         rewards.insert(0, R)
+        # 保证最开始的action得到的reward在最前边
+        # 那么rewards中每一个元素 就是存储 该节点 所采取相应行动后,得到的累计奖励
 
     rewards = torch.tensor(rewards)
     rewards = (rewards - rewards.mean()) / (rewards.std() + eps)
@@ -99,7 +101,8 @@ def finish_episode():
     for (log_prob , value), r in zip(save_actions, rewards):
         # https://towardsdatascience.com/understanding-actor-critic-methods-931b97b6df3f
         # Q-actor critic
-        reward = r - value.item() # r(t) - V(St)
+        reward = r - value.item()
+        # r(t) - V(St) : V(St)理解为出现St时,平均得到的分数,r是采取a(t)后最后得到的分数
         policy_loss.append( - log_prob * reward )
 
         value_loss.append(F.smooth_l1_loss(value, torch.tensor([r])))

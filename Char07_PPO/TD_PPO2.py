@@ -124,7 +124,8 @@ class PPO():
         reward = torch.tensor(np.array([t.reward for t in self.buffer]), dtype=torch.float).view(-1, 1)
         next_state = torch.tensor(np.array([t.next_state for t in self.buffer]), dtype=torch.float)
         old_action_log_prob = torch.tensor(np.array([t.a_log_prob for t in self.buffer]), dtype=torch.float).view(-1, 1)
-        # old 对应 theta'
+        # old 对应 theta' 这一系列 st at rt 都是基于theta'得到的,接下来用这些st去不断更新theta
+
         reward = (reward - reward.mean())/(reward.std() + 1e-10)
         with torch.no_grad():
             target_v = reward + args.gamma * self.critic_net(next_state)
@@ -142,6 +143,9 @@ class PPO():
                 mu, sigma = self.actor_net(state[index])
                 n = Normal(mu, sigma)
                 action_log_prob = n.log_prob(action[index])
+                # 每次新的p(theta tao)
+
+
                 ratio = torch.exp(action_log_prob - old_action_log_prob[index])
                 # 通过loss使得 新theta 尽量的 和 旧的theta' 接近
                 L1 = ratio * advantage[index]
@@ -163,13 +167,29 @@ class PPO():
 
         del self.buffer[:]
 
+
+def plot(steps):
+    ax = plt.subplot(111)
+    ax.cla()
+    ax.grid()
+    ax.set_title('Training')
+    ax.set_xlabel('Episode')
+    ax.set_ylabel('Run Time')
+    ax.plot(steps)
+    RunTime = len(steps)
+
+    # path = './AC_CartPole-v0/' + 'RunTime' + str(RunTime) + '.jpg'
+    # if len(steps) % 200 == 0:
+    #     plt.savefig(path)
+    plt.pause(0.0000001)
+
 def main():
 
     agent = PPO()
 
     training_records = []
     running_reward = -1000
-
+    live_time = []
     for i_epoch in range(1000):
         score = 0
         state = env.reset()
@@ -188,6 +208,8 @@ def main():
 
         running_reward = running_reward * 0.9 + score * 0.1
         training_records.append(TrainRecord(i_epoch, running_reward))
+        live_time.append(score)
+        plot(live_time)
         if i_epoch % 10 == 0:
             print("Epoch {}, Moving average score is: {:.2f} ".format(i_epoch, running_reward))
         if running_reward > -200:

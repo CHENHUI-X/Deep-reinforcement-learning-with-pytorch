@@ -67,7 +67,10 @@ def finish_episode():
     for r in policy.rewards[::-1]:
         R = r + args.gamma * R
         # gama^n * r1 + gama^(n-1) * r2 + ... + gama^0 * rn
-        rewards.insert(0, R) # 保证最开始的action得到的reward在最前边
+        rewards.insert(0, R)
+        # 保证最开始的action得到的reward在最前边
+        # 那么rewards中每一个元素 就是存储 该节点 所采取相应行动后,得到的累计奖励
+
     rewards = torch.tensor(rewards)
     rewards = (rewards - rewards.mean()) / (rewards.std() + eps)
     for log_prob, reward in zip(policy.saved_log_probs, rewards):
