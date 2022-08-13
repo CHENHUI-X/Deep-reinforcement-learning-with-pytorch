@@ -14,7 +14,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.distributions import Normal, Categorical
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
-from tensorboardX import SummaryWriter
+# from tensorboardX import SummaryWriter
 
 # Parameters
 gamma = 0.99
@@ -67,18 +67,19 @@ class PPO():
         self.buffer = []
         self.counter = 0
         self.training_step = 0
-        self.writer = SummaryWriter('../exp')
+        # self.writer = SummaryWriter('../exp')
 
         self.actor_optimizer = optim.Adam(self.actor_net.parameters(), 1e-3)
         self.critic_net_optimizer = optim.Adam(self.critic_net.parameters(), 3e-3)
-        if not os.path.exists('../param'):
-            os.makedirs('../param/net_param')
-            os.makedirs('../param/img')
+        # if not os.path.exists('../param'):
+        #     os.makedirs('../param/net_param')
+        #     os.makedirs('../param/img')
 
     def select_action(self, state):
         state = torch.from_numpy(state).float().unsqueeze(0)
         with torch.no_grad():
             action_prob = self.actor_net(state)
+
         c = Categorical(action_prob)
         action = c.sample()
         return action.item(), action_prob[:,action.item()].item()
@@ -89,9 +90,9 @@ class PPO():
             value = self.critic_net(state)
         return value.item()
 
-    def save_param(self):
-        torch.save(self.actor_net.state_dict(), '../param/net_param/actor_net' + str(time.time())[:10], +'.pkl')
-        torch.save(self.critic_net.state_dict(), '../param/net_param/critic_net' + str(time.time())[:10], +'.pkl')
+    # def save_param(self):
+    #     torch.save(self.actor_net.state_dict(), '../param/net_param/actor_net' + str(time.time())[:10], +'.pkl')
+    #     torch.save(self.critic_net.state_dict(), '../param/net_param/critic_net' + str(time.time())[:10], +'.pkl')
 
     def store_transition(self, transition):
         self.buffer.append(transition)
@@ -115,13 +116,15 @@ class PPO():
         Gt = torch.tensor(Gt, dtype=torch.float)
         #print("The agent is updateing....")
         for i in range(self.ppo_update_time):
-            for index in BatchSampler(SubsetRandomSampler(range(len(self.buffer))), self.batch_size, False):
+            for index in BatchSampler(
+                  SubsetRandomSampler(range(len(self.buffer))), self.batch_size, False
+            ):
                 if self.training_step % 1000 ==0:
                     print('I_ep {} ，train {} times'.format(i_ep,self.training_step))
                 #with torch.no_grad():
                 Gt_index = Gt[index].view(-1, 1)
                 V = self.critic_net(state[index])
-                delta = Gt_index - V
+                delta = Gt_index - V #
                 advantage = delta.detach()
                 # epoch iteration, PPO core!!!
                 action_prob = self.actor_net(state[index]).gather(1, action[index]) # new policy
@@ -132,7 +135,7 @@ class PPO():
 
                 # update actor network
                 action_loss = -torch.min(surr1, surr2).mean()  # MAX->MIN desent
-                self.writer.add_scalar('loss/action_loss', action_loss, global_step=self.training_step)
+                # self.writer.add_scalar('loss/action_loss', action_loss, global_step=self.training_step)
                 self.actor_optimizer.zero_grad()
                 action_loss.backward()
                 nn.utils.clip_grad_norm_(self.actor_net.parameters(), self.max_grad_norm)
@@ -140,7 +143,7 @@ class PPO():
 
                 #update critic network
                 value_loss = F.mse_loss(Gt_index, V)
-                self.writer.add_scalar('loss/value_loss', value_loss, global_step=self.training_step)
+                # self.writer.add_scalar('loss/value_loss', value_loss, global_step=self.training_step)
                 self.critic_net_optimizer.zero_grad()
                 value_loss.backward()
                 nn.utils.clip_grad_norm_(self.critic_net.parameters(), self.max_grad_norm)
@@ -152,22 +155,28 @@ class PPO():
     
 def main():
     agent = PPO()
+    running_reward = 10
     for i_epoch in range(1000):
         state = env.reset()
-        if render: env.render()
 
         for t in count():
             action, action_prob = agent.select_action(state)
-            next_state, reward, done, _ = env.step(action)
+            next_state, reward, done,  interrupt , info  = env.step(action)
             trans = Transition(state, action, action_prob, reward, next_state)
-            if render: env.render()
-            agent.store_transition(trans)
-            state = next_state
+            if render  :  env.render()
 
-            if done :
-                if len(agent.buffer) >= agent.batch_size:agent.update(i_epoch)
-                agent.writer.add_scalar('liveTime/livestep', t, global_step=i_epoch)
-                break
+            if agent.store_transition(trans): # 1000次
+                agent.update()
+            state = next_state
+            if done : break
+        running_reward = running_reward * 0.99 + t * 0.01
+
+        if i_epoch % 10 == 0:
+            print("Epoch {}, Moving average score is: {:.2f} ".format(i_epoch, running_reward))
+
+
+
+
 
 if __name__ == '__main__':
     main()

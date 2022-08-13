@@ -19,13 +19,13 @@ torch.manual_seed(1)
 
 state_space = env.observation_space.shape[0]
 action_space = env.action_space.n
-
+# print(state_space,action_space)
 
 #Hyperparameters
 learning_rate = 0.01
 gamma = 0.99
 episodes = 20000
-render = False
+render = True
 eps = np.finfo(np.float32).eps.item()
 SavedAction = namedtuple('SavedAction', ['log_prob', 'value'])
 
@@ -37,8 +37,7 @@ class Policy(nn.Module):
         self.action_head = nn.Linear(32, action_space)
         # return action  a(t)
         self.value_head = nn.Linear(32, 1)
-        # return pred reward based on  current action ( a(t) ) , which is v(St+1)
-
+        # return V(St)
 
         self.save_actions = []
         self.rewards = []
@@ -70,9 +69,10 @@ def plot(steps):
     plt.pause(0.0000001)
 
 def select_action(state): # input : state of t
-    state = torch.from_numpy(state).float()
+    state = torch.from_numpy(state).float() # 从计算图剥离
     probs, state_value = model(state)
-    # out : probs of  action ( a(t) ) with state of t  , and V(St)
+    # out : probs of  action ( a(t) )  with state of  t , and  V(St) : 即在St下平均得到的分数
+
     m = Categorical(probs)
     action = m.sample()
     model.save_actions.append(
@@ -97,9 +97,13 @@ def finish_episode():
     rewards = (rewards - rewards.mean()) / (rewards.std() + eps)
 
     for (log_prob , value), r in zip(save_actions, rewards):
-        reward = r - value.item()
-        policy_loss.append(-log_prob * reward)
+        # https://towardsdatascience.com/understanding-actor-critic-methods-931b97b6df3f
+        # Q-actor critic
+        reward = r - value.item() # r(t) - V(St)
+        policy_loss.append( - log_prob * reward )
+
         value_loss.append(F.smooth_l1_loss(value, torch.tensor([r])))
+
 
     optimizer.zero_grad()
     loss = torch.stack(policy_loss).sum() + torch.stack(value_loss).sum()
@@ -116,12 +120,13 @@ def main():
         state = env.reset()
         for t in count():
             action = select_action(state)
-            state, reward, done, info = env.step(action)
+
+            state, reward, done, interrupt,info = env.step(action)
             # reward : r(t) of based on a(t)
             if render :  env.render()
             model.rewards.append(reward)
 
-            if done or t >= 1000:
+            if done or interrupt or t >= 1000:
                 break
         running_reward = running_reward * 0.99 + t * 0.01
         live_time.append(t)
