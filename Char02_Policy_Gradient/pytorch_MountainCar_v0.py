@@ -78,7 +78,7 @@ def finish_episode():
 
     # get loss
     for reward, log_prob in zip(rewards, policy.saved_log_probs):
-        policy_loss.append(-log_prob * reward)
+        policy_loss.append(-log_prob * reward) # min -l <=> max l
 
     optimizer.zero_grad()
     policy_loss = torch.cat(policy_loss).sum()
