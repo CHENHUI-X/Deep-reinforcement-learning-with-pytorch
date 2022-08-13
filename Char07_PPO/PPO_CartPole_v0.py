@@ -124,7 +124,7 @@ class PPO():
                 #with torch.no_grad():
                 Gt_index = Gt[index].view(-1, 1)
                 V = self.critic_net(state[index])
-                delta = Gt_index - V #
+                delta = Gt_index - V #???
                 advantage = delta.detach()
                 # epoch iteration, PPO core!!!
                 action_prob = self.actor_net(state[index]).gather(1, action[index]) # new policy
