@@ -124,8 +124,8 @@ def main():
                 steps.append(t)
                 plot(steps)
                 break
-        if episode % 50 == 0:
-            torch.save(policy, 'policyNet.pkl')
+        # if episode % 50 == 0:
+        #     torch.save(policy, 'policyNet.pkl')
 
         running_reward = running_reward * policy.gamma - t*0.01
         finish_episode()

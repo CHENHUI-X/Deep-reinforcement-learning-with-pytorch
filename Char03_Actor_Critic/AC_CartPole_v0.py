@@ -100,9 +100,10 @@ def finish_episode():
 
     for (log_prob , value), r in zip(save_actions, rewards):
         # https://towardsdatascience.com/understanding-actor-critic-methods-931b97b6df3f
-        # Q-actor critic
+        # actor critic
         reward = r - value.item()
         # r(t) - V(St) : V(St)理解为出现St时,平均得到的分数,r是采取a(t)后最后得到的分数
+        # 用这个作为实际的reward
         policy_loss.append( - log_prob * reward )
 
         value_loss.append(F.smooth_l1_loss(value, torch.tensor([r])))

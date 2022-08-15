@@ -129,8 +129,10 @@ class PPO():
         reward = (reward - reward.mean())/(reward.std() + 1e-10)
         with torch.no_grad():
             target_v = reward + args.gamma * self.critic_net(next_state)
-            #  target_v :  r(t) + gama * v(St+1) 应该约等于 v(St)
+            #  target_v 指的是,在St画面,具体采取了at这个动作,到最后得到的reward
+
         advantage = (target_v - self.critic_net(state)).detach() # Advantage actor-critic
+        # 这是advantage就是指,具体st采取at,相比st平均采取所有动作,得到的分数,多了多少
         # 在 旧的theta上得到的 A_theta' 结果
 
         for _ in range(self.ppo_epoch): # iteration ppo_epoch

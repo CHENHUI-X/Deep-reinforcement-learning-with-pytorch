@@ -64,8 +64,10 @@ class PPO():
 
     def __init__(self):
         super(PPO, self).__init__()
-        self.actor_net = Actor()
-        self.critic_net = Critic()
+        # self.actor_net = Actor()
+        # self.critic_net = Critic()
+        self.actor_net = Actor().float()
+        self.critic_net = Critic().float()
         self.buffer = []
         self.counter = 0
         self.training_step = 0
@@ -85,6 +87,7 @@ class PPO():
         action = c.sample()
         return action.item(), action_prob[:, action.item()].item()
 
+
     def get_value(self, state):
         state = torch.from_numpy(state)
         with torch.no_grad():
@@ -100,24 +103,37 @@ class PPO():
         self.counter += 1
 
     def update(self, i_ep):
-        state = torch.tensor([t.state for t in self.buffer], dtype=torch.float)
-        action = torch.tensor([t.action for t in self.buffer], dtype=torch.long).view(-1, 1)
-        reward = [t.reward for t in self.buffer]
-        # update: don't need next_state
-        # next_state = torch.tensor([t.next_state for t in self.buffer], dtype=torch.float)
-        old_action_log_prob = torch.tensor(
-            [t.a_log_prob for t in self.buffer], dtype=torch.float).view(-1, 1)
-        # 之前的theta(也就是theta') , 这一系列 st at rt 都是基于theta'得到的,接下来用这些st去不断更新theta
+        state = torch.tensor(np.array([t.state for t in self.buffer]), dtype=torch.float)
+        action = torch.tensor(np.array([t.action for t in self.buffer]), dtype=torch.float).view(-1, 1)
+        reward = torch.tensor(np.array([t.reward for t in self.buffer]), dtype=torch.float).view(-1, 1)
+        next_state = torch.tensor(np.array([t.next_state for t in self.buffer]), dtype=torch.float)
+        old_action_log_prob = torch.tensor(np.array([t.a_log_prob for t in self.buffer]), dtype=torch.float).view(-1, 1)
+        # old 对应 theta' 这一系列 st at rt 都是基于theta'得到的,接下来用这些st去不断更新theta
 
-        R = 0
-        Gt = []
-        for r in reward[::-1]:
-            R = r + gamma * R
-            Gt.insert(0, R)
-            # 保证最开始的action得到的reward在最前边
-            # 那么 Gt 中每一个元素 就是存储 该节点 所采取相应行动后,得到的累计奖励
+        '''
+        # R = 0
+        # Gt = []
+        # for r in reward[::-1]:
+        #     R = r + gamma * R
+        #     Gt.insert(0, R)
+        #     # 保证最开始的action得到的reward在最前边
+        #     # 那么 Gt 中每一个元素 就是存储 该节点 所采取相应行动后,得到的累计奖励
+        # Gt = torch.tensor(Gt, dtype=torch.float)
+        #
+        # 这里的写法是把 reward 写成rt + gama * rt+1 + gama^2 * rt+2 ...
+        # 然后用reward - critic(st) = advantage 表示st采取at后,相比原来好了多少
+        # 而TD_PPO2中,是直接用 rt + gama * critic(next_state) ,即critic(next_state)
+        # 给出的是一个,在采取at后,st+1后reward的一个期望,
+        # 代替了后续 rt+1 , rt+2 ...具体操作带来的reward
+        # 这里,我注释掉了,本来的写法,还是采取的TD_PPO2中的写法
+        '''
+        with torch.no_grad():
+            target_v = reward + gamma * self.critic_net(next_state)
+            #  target_v 指的是,在St画面,具体采取了at这个动作,到最后得到的reward
+        advantage = (target_v - self.critic_net(state)).detach()  # Advantage actor-critic
+        # 这是advantage就是指,具体st采取at,相比st平均采取所有动作,得到的分数,多了多少
+        # 在 旧的theta上得到的 A_theta' 结果
 
-        Gt = torch.tensor(Gt, dtype=torch.float)
         # print("The agent is updateing....")
         for i in range(self.ppo_update_time):
             for index in BatchSampler(
@@ -125,19 +141,34 @@ class PPO():
             ):
                 if self.training_step % 1000 == 0:
                     print('I_ep {} ，train {} times'.format(i_ep, self.training_step))
+                '''
                 # with torch.no_grad():
-                Gt_index = Gt[index].view(-1, 1)
-                V = self.critic_net(state[index])
-                delta = Gt_index - V
-                # Gt_index - V  : V 理解为出现St时,平均得到的分数,Gt是采取a(t)后最后得到的分数
-                advantage = delta.detach()
-                # epoch iteration, PPO core!!!
-                action_prob = self.actor_net(state[index]).gather(1, action[index])  # new policy
-                # 每次新的p(theta tao)
+                # Gt_index = Gt[index].view(-1, 1)
+                #
+                # V = self.critic_net(state[index]) #
+                #
+                # delta = Gt_index - V
+                # # Gt_index - V  : V 理解为出现St时,平均得到的分数,Gt是采取a(t)后最后得到的分数
+                # advantage = delta.detach()
+                
+                # 这里的写法是把 reward 写成rt + gama * rt+1 + gama^2 * rt+2 ...
+                # 然后用reward - critic(st) = advantage 表示st采取at后,相比原来好了多少
+                # 而TD_PPO2中,是直接用 rt + gama * critic(next_state) ,即critic(next_state)
+                # 给出的是一个,在采取at后,st+1后reward的一个期望,
+                # 代替了后续 rt+1 , rt+2 ...具体操作带来的reward
+                # 这里,我注释掉了,本来的写法,还是采取的TD_PPO2中的写法
+                
+                '''
 
-                ratio = (action_prob / old_action_log_prob[index])
-                surr1 = ratio * advantage
-                surr2 = torch.clamp(ratio, 1 - self.clip_param, 1 + self.clip_param) * advantage
+                # epoch iteration, PPO core!!!
+                # action_prob = self.actor_net(state[index]).gather(1, action[index])  # new policy
+                # 每次新的p(theta tao)
+                action_log_prob = self.actor_net(state[index])
+
+
+                ratio = (action_log_prob / old_action_log_prob[index])
+                surr1 = ratio * advantage[index]
+                surr2 = torch.clamp(ratio, 1 - self.clip_param, 1 + self.clip_param) * advantage[index]
 
                 # update actor network
                 action_loss = -torch.min(surr1, surr2).mean()  # MAX->MIN desent
@@ -148,7 +179,9 @@ class PPO():
                 self.actor_optimizer.step()
 
                 # update critic network
-                value_loss = F.mse_loss(Gt_index, V)
+
+                value_loss = F.smooth_l1_loss(self.critic_net(state[index]), target_v[index])
+
                 # self.writer.add_scalar('loss/value_loss', value_loss, global_step=self.training_step)
                 self.critic_net_optimizer.zero_grad()
                 value_loss.backward()

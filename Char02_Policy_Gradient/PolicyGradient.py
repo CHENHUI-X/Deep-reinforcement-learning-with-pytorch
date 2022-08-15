@@ -56,7 +56,7 @@ def select_action(state):
 
     m = Categorical(probs) # create a category distribution according pro
     action = m.sample() # sample an action from distribution ,output 0 or 1
-    policy.saved_log_probs.append(m.log_prob(action))
+    policy.saved_log_probs.append(m.log_prob(action)) # 推导中的log p(at|st)
     return action.item()
 
 
