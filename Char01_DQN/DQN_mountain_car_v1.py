@@ -76,7 +76,7 @@ class Dqn():
         ax.set_xlabel("episode")
         ax.set_ylabel("total reward")
         ax.plot(x, 'b-')
-        plt.pause(0.000000000000001)
+        plt.pause(0.000000001)
 
     def learn(self):
         # learn 100 times then the target network update
@@ -114,7 +114,7 @@ def main():
             step_counter +=1
             env.render()
             action = net.choose_action(state)
-            next_state, reward, done, info = env.step(action)
+            next_state, reward,  done ,truncated, _ = env.step(action)
             reward = reward * 100 if reward >0 else reward * 5
             net.store_trans(state, action, reward, next_state)
 

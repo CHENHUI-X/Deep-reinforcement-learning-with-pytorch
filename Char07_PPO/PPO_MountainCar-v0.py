@@ -159,7 +159,7 @@ def main():
 
         for t in count():
             action, action_prob = agent.select_action(state)
-            next_state, reward, done, _ = env.step(action)
+            next_state, reward,  done ,truncated, _  = env.step(action)
             trans = Transition(state, action, action_prob, reward, next_state)
             if render: env.render()
             agent.store_transition(trans)

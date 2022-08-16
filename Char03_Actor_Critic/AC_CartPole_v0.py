@@ -125,7 +125,7 @@ def main():
         for t in count():
             action = select_action(state)
 
-            state, reward, terminated , done , info = env.step(action)
+            next_state, reward,  done ,truncated, _  = env.step(action)
             # reward : r(t) of based on a(t)
             if render :  env.render()
             model.rewards.append(reward)

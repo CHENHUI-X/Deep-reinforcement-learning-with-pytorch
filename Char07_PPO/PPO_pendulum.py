@@ -162,13 +162,13 @@ def main():
 
         for t in range(200):
             action, action_log_prob = agent.select_action(state)
-            state_, reward, done, _ = env.step([action])
+            next_state, reward,  done ,truncated, _ = env.step([action])
             if args.render:
                 env.render()
-            if agent.store(Transition(state, action, action_log_prob, (reward + 8) / 8, state_)):
+            if agent.store(Transition(state, action, action_log_prob, (reward + 8) / 8, next_state)):
                 agent.update()
             score += reward
-            state = state_
+            state = next_state
 
         running_reward = running_reward * 0.9 + score * 0.1
         training_records.append(TrainingRecord(i_ep, running_reward))

@@ -14,11 +14,11 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.distributions import Normal, Categorical
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
-from tensorboardX import SummaryWriter
+# from tensorboardX import SummaryWriter
 
 # Hyper-parameters
 seed = 1
-render = False
+render = True
 num_episodes = 400000
 env = gym.make('MountainCar-v0').unwrapped
 num_state = env.observation_space.shape[0]
@@ -54,7 +54,7 @@ class DQN():
         self.memory = [None]*self.capacity
         self.optimizer = optim.Adam(self.act_net.parameters(), self.learning_rate)
         self.loss_func = nn.MSELoss()
-        self.writer = SummaryWriter('./DQN/logs')
+        # self.writer = SummaryWriter('./DQN/logs')
 
 
     def select_action(self,state):
@@ -90,7 +90,7 @@ class DQN():
                 self.optimizer.zero_grad()
                 loss.backward()
                 self.optimizer.step()
-                self.writer.add_scalar('loss/value_loss', loss, self.update_count)
+                # self.writer.add_scalar('loss/value_loss', loss, self.update_count)
                 self.update_count +=1
                 if self.update_count % 100 ==0:
                     self.target_net.load_state_dict(self.act_net.state_dict())
@@ -104,13 +104,13 @@ def main():
         if render: env.render()
         for t in range(10000):
             action = agent.select_action(state)
-            next_state, reward, done, info = env.step(action)
-            if render: env.render()
+            next_state, reward,  done ,truncated, _ = env.step(action)
+            if render : env.render()
             transition = Transition(state, action, reward, next_state)
             agent.store_transition(transition)
             state = next_state
             if done or t >=9999:
-                agent.writer.add_scalar('live/finish_step', t+1, global_step=i_ep)
+                # agent.writer.add_scalar('live/finish_step', t+1, global_step=i_ep)
                 agent.update()
                 if i_ep % 10 == 0:
                     print("episodes {}, step is {} ".format(i_ep, t))

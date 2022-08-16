@@ -115,7 +115,7 @@ def main():
         for t in range(10000):
             action = selct_action(state)
             print(env.step(action))
-            state, reward, terminated ,done , info  = env.step(action)
+            next_state, reward, done, truncated, _ = env.step(action)
             env.render()
             policy.rewards.append(reward)
 

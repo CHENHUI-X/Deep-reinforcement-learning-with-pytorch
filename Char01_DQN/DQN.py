@@ -68,19 +68,20 @@ class DQN():
 
     def choose_action(self, state):
         state = torch.unsqueeze(torch.FloatTensor(state), 0) # get a 1D array
-        if np.random.randn() <= EPISILO:# greedy policy
+        if np.random.randn() <= EPISILO: # greedy policy
             action_value = self.eval_net.forward(state)
-            action = torch.max(action_value, 1)[1].data.numpy() #
+            action = torch.max(action_value, 1)[1].data.numpy()
+            # max return value and index ,the index is the action
             action = action[0] if ENV_A_SHAPE == 0 else action.reshape(ENV_A_SHAPE)
         else: # random policy
             action = np.random.randint(0,NUM_ACTIONS)
-            action = action if ENV_A_SHAPE ==0 else action.reshape(ENV_A_SHAPE)
+            action = action if ENV_A_SHAPE == 0 else action.reshape(ENV_A_SHAPE)
         return action
 
 
     def store_transition(self, state, action, reward, next_state):
         transition = np.hstack((state, [action, reward], next_state))
-        index = self.memory_counter % MEMORY_CAPACITY
+        index = self.memory_counter % MEMORY_CAPACITY # 2000个index 轮流覆盖
         self.memory[index, :] = transition
         self.memory_counter += 1
 
@@ -88,9 +89,10 @@ class DQN():
     def learn(self):
 
         #update the parameters
-        if self.learn_step_counter % Q_NETWORK_ITERATION ==0:
+        if self.learn_step_counter % Q_NETWORK_ITERATION == 0:
             self.target_net.load_state_dict(self.eval_net.state_dict())
-        self.learn_step_counter+=1
+            # update target net
+        self.learn_step_counter += 1
 
         #sample batch from memory
         sample_index = np.random.choice(MEMORY_CAPACITY, BATCH_SIZE)
@@ -100,9 +102,41 @@ class DQN():
         batch_reward = torch.FloatTensor(batch_memory[:, NUM_STATES+1:NUM_STATES+2])
         batch_next_state = torch.FloatTensor(batch_memory[:,-NUM_STATES:])
 
+        '''
+                # torch.gather(input, dim, index)
+                b = torch.Tensor([[1,2,3],[4,5,6]])
+                print b
+                index_1 = torch.LongTensor([[0,1],[2,0]])
+                index_2 = torch.LongTensor([[0,1,1],[0,0,0]])
+                print torch.gather(b, dim=1, index=index_1)
+                print torch.gather(b, dim=0, index=index_2)
+
+                输出 : 
+
+                     1  2  3
+                     4  5  6
+                    [torch.FloatTensor of size 2x3]
+
+                     1  2
+                     6  4
+                    [torch.FloatTensor of size 2x2]
+                    就是把索引替换为index,只不过看替换的是哪个维度,dim=1,index = [[0,1],[2,0]]
+                    那调用的是 (0,0) (0,1)  (1,2) (1,0)
+                    结果分别为   1      2     6     4
+
+                     1  5  6
+                     1  2  3
+                    [torch.FloatTensor of size 2x3]
+                    当dim = 0,index = [[0,1,1],[0,0,0]]
+                    调用的是 (0,0) (1,1) ( 1,2)  (0,0) ( 0,1) (0,2)
+                    结果分别为  1     5     6       1      2     3
+
+                '''
         #q_eval
         q_eval = self.eval_net(batch_state).gather(1, batch_action)
-        q_next = self.target_net(batch_next_state).detach()
+        # get action use [ batch , action_index]
+
+        q_next = self.target_net(batch_next_state).detach() # Q(st+1,a)
         q_target = batch_reward + GAMMA * q_next.max(1)[0].view(BATCH_SIZE, 1)
         loss = self.loss_func(q_eval, q_target)
 
@@ -115,23 +149,33 @@ def reward_func(env, x, x_dot, theta, theta_dot):
     r2 = (env.theta_threshold_radians - abs(theta)) / env.theta_threshold_radians - 0.5
     reward = r1 + r2
     return reward
+def plot_live( reward_list ) :
+    plt.ion()
+    ax = plt.subplot(111)
+    ax.cla()
+    ax.grid()
+    ax.set_title('Training')
+    ax.set_xlabel('Episode')
+    ax.set_ylabel('Run Time')
+    ax.plot(reward_list)
+
+    plt.pause(0.0000001)
 
 def main():
     dqn = DQN()
     episodes = 400
     print("Collecting Experience....")
     reward_list = []
-    plt.ion()
-    fig, ax = plt.subplots()
+
     for i in range(episodes):
         state = env.reset()
         ep_reward = 0
         while True:
             env.render()
             action = dqn.choose_action(state)
-            next_state, _  , done, info = env.step(action)
-            x, x_dot, theta, theta_dot = next_state
-            reward = reward_func(env, x, x_dot, theta, theta_dot)
+            next_state, reward,  done , truncated , _  = env.step(action)
+            position, velocity ,pos_angle, v_angle = next_state
+            # reward = reward_func(env, position, velocity ,pos_angle, v_angle)
 
             dqn.store_transition(state, action, reward, next_state)
             ep_reward += reward
@@ -142,14 +186,13 @@ def main():
                     print("episode: {} , the episode reward is {}".format(i, round(ep_reward, 3)))
             if done:
                 break
+                # else go to next state
             state = next_state
-        r = copy.copy(reward)
+        r = copy.copy(ep_reward)
         reward_list.append(r)
-        ax.set_xlim(0,300)
-        #ax.cla()
-        ax.plot(reward_list, 'g-', label='total_loss')
-        plt.pause(0.001)
-        
+        # plot
+        plot_live(reward_list)
+
 
 if __name__ == '__main__':
     main()
