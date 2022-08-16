@@ -160,6 +160,7 @@ class PPO():
 
                 value_loss = F.smooth_l1_loss(self.critic_net(state[index]), target_v[index])
                 # #  target_v :  r(t) + gama * v(St+1) 应该约等于 v(St)
+                # ( 上边同时使用了 TD的思想 和 import sampling )
                 # 也就是想让每次更新的theta 能够在 旧的theta' 看到的state上表现也不错
 
                 self.critic_net_optimizer.zero_grad()
