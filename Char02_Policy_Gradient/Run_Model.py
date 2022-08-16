@@ -84,7 +84,7 @@ def run_Model():
 
         for t in range(10000):
             action = selct_action(state)
-            state, reward ,done, info = env.step(action)
+            state, reward, terminated ,done , info  = env.step(action)
             env.render()
             #policy.rewards.append(reward)
 

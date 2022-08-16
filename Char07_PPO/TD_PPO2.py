@@ -199,7 +199,7 @@ def main():
         for t in range(200):
 
             action, action_log_prob = agent.select_action(state)
-            next_state, reward, done, interrupt , info = env.step([action])
+            state, reward, terminated ,done , info  = env.step([action])
             trans = Transition(state, action, reward, action_log_prob, next_state)
             if args.render : env.render()
             if agent.store_transition(trans): # 1000次

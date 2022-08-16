@@ -90,7 +90,7 @@ def main():
         for t in range(100):
             # Don't infinite loop while learning
             action = select_action(state)
-            state, reward, done, _ = env.step(action)
+            state, reward, terminated ,done , info  = env.step(action)
             if args.render:
                 env.render()
             policy.rewards.append(reward)

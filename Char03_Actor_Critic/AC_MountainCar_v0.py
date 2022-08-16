@@ -121,7 +121,7 @@ def main():
 
         for t in count():
             action = select_action(state)
-            state , reward, done, _ = env.step(action)
+            state, reward, terminated ,done , info  = env.step(action)
             reward = state[0] + reward
             if RENDER: env.render()
             policy.rewards.append(reward)

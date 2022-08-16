@@ -14,8 +14,18 @@ EPISILO = 0.9
 MEMORY_CAPACITY = 2000
 Q_NETWORK_ITERATION = 100
 
-env = gym.make("CartPole-v0")
-env = env.unwrapped
+env = gym.make("CartPole-v0").unwrapped
+'''
+#  unwrapped  还原env的原始设置，env外包了一层防作弊层 
+据说gym的多数环境都用TimeLimit（源码）包装了，以限制Epoch，
+就是step的次数限制，比如限定为200次。所以小车保持平衡200步后，就会失败
+env._max_episode_steps : 200
+-------------------------------------------------------------
+用env.unwrapped可以得到原始的类，原始类想step多久就多久，不会200步后失败：
+env.unwrapped : gym.envs.classic_control.cartpole.CartPoleEnv
+'''
+
+
 NUM_ACTIONS = env.action_space.n
 NUM_STATES = env.observation_space.shape[0]
 ENV_A_SHAPE = 0 if isinstance(env.action_space.sample(), int) else env.action_space.sample.shape
@@ -37,6 +47,8 @@ class Net(nn.Module):
         x = self.fc2(x)
         x = F.relu(x)
         action_prob = self.out(x)
+        # indicate that Q value of all  action  with state s
+
         return action_prob
 
 class DQN():
@@ -58,7 +70,7 @@ class DQN():
         state = torch.unsqueeze(torch.FloatTensor(state), 0) # get a 1D array
         if np.random.randn() <= EPISILO:# greedy policy
             action_value = self.eval_net.forward(state)
-            action = torch.max(action_value, 1)[1].data.numpy()
+            action = torch.max(action_value, 1)[1].data.numpy() #
             action = action[0] if ENV_A_SHAPE == 0 else action.reshape(ENV_A_SHAPE)
         else: # random policy
             action = np.random.randint(0,NUM_ACTIONS)
@@ -117,7 +129,7 @@ def main():
         while True:
             env.render()
             action = dqn.choose_action(state)
-            next_state, _ , done, info = env.step(action)
+            next_state, _  , done, info = env.step(action)
             x, x_dot, theta, theta_dot = next_state
             reward = reward_func(env, x, x_dot, theta, theta_dot)
 

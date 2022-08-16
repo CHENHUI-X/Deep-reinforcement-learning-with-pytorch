@@ -125,12 +125,12 @@ def main():
         for t in count():
             action = select_action(state)
 
-            state, reward, done, interrupt,info = env.step(action)
+            state, reward, terminated , done , info = env.step(action)
             # reward : r(t) of based on a(t)
             if render :  env.render()
             model.rewards.append(reward)
 
-            if done or interrupt or t >= 1000:
+            if done  or t >= 1000:
                 break
         running_reward = running_reward * 0.99 + t * 0.01
         live_time.append(t)

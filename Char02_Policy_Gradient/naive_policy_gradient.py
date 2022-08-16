@@ -89,7 +89,7 @@ def train():
             action = c.sample()
 
             action = action.data.numpy().astype('int32')
-            next_state, reward, done, info = env.step(action)
+            state, reward, terminated ,done , info = env.step(action)
             reward = 0 if done else reward # correct the reward
             env.render()
 
