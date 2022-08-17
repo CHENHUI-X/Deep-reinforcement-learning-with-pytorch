@@ -101,7 +101,7 @@ def finish_episode():
     for (log_prob , value), r in zip(save_actions, rewards):
         # https://towardsdatascience.com/understanding-actor-critic-methods-931b97b6df3f
         # actor critic
-        reward = r - value.item() # 蒙特卡洛方法,rt <->v(st)
+        reward = r - value.item() # 基于蒙特卡洛方法的Advantage function ,rt <->v(st)
 
         # r(t) - V(St) : V(St)理解为出现St时,平均得到的分数,r是采取a(t)后最后得到的分数
         # 用这个作为实际的reward
