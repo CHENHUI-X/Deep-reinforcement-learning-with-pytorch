@@ -7,7 +7,7 @@ import os, time
 import numpy as np
 import matplotlib.pyplot as plt
 
-import gym
+import gymnasium as gym
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -18,13 +18,13 @@ from tensorboardX import SummaryWriter
 
 # Hyper-parameters
 seed = 1
-render = False
+render = True
 num_episodes = 2000
 env = gym.make('CartPole-v0').unwrapped
 num_state = env.observation_space.shape[0]
 num_action = env.action_space.n
 torch.manual_seed(seed)
-env.seed(seed)
+env.action_space.seed(seed)
 
 Transition = namedtuple('Transition', ['state', 'action', 'reward', 'next_state'])
 
@@ -80,13 +80,28 @@ class DQN():
             next_state = torch.tensor([t.next_state for t in self.memory]).float()
 
             reward = (reward - reward.mean()) / (reward.std() + 1e-7)
+
             with torch.no_grad():
+                # rt + arg_a Q(St+1 ,a ) , here max(1) is the argmax of the Q with action
                 target_v = reward + self.gamma * self.target_net(next_state).max(1)[0]
 
+            """
+            v = self.act_net(state).gather(1 , action) # Q(St,at)
+            
+            Can't define v here then use it in for loop below
+            Because of when call  loss.backward() , imediately variable 
+            will be deleted , so v[index] is not work when next for loop 
+            
+            """
+
             #Update...
+            # Q(St,at) = reward + Q_targey(next_state)
             for index in BatchSampler(SubsetRandomSampler(range(len(self.memory))), batch_size=self.batch_size, drop_last=False):
-                v = (self.act_net(state).gather(1, action))[index]
-                loss = self.loss_func(target_v[index].unsqueeze(1), (self.act_net(state).gather(1, action))[index])
+
+                loss = self.loss_func(
+                    target_v[index].unsqueeze(1),
+                    self.act_net(state).gather(1 , action)[index]
+                )
                 self.optimizer.zero_grad()
                 loss.backward()
                 self.optimizer.step()
@@ -100,16 +115,16 @@ def main():
 
     agent = DQN()
     for i_ep in range(num_episodes):
-        state = env.reset()
+        state , info = env.reset()
         if render: env.render()
         for t in range(10000):
             action = agent.select_action(state)
-            next_state, reward, done, info = env.step(action)
+            next_state, reward,  terminated , truncated , info = env.step(action)
             if render: env.render()
             transition = Transition(state, action, reward, next_state)
             agent.store_transition(transition)
             state = next_state
-            if done or t >=9999:
+            if terminated or  truncated or t >=9999:
                 agent.writer.add_scalar('live/finish_step', t+1, global_step=i_ep)
                 agent.update()
                 if i_ep % 10 == 0:

@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-import gym
+import gymnasium as gym
 import matplotlib.pyplot as plt
 import copy
 
@@ -14,7 +14,6 @@ EPISILO = 0.9
 MEMORY_CAPACITY = 2000
 Q_NETWORK_ITERATION = 100
 
-env = gym.make("CartPole-v0").unwrapped
 '''
 #  unwrapped  还原env的原始设置，env外包了一层防作弊层 
 据说gym的多数环境都用TimeLimit（源码）包装了，以限制Epoch，
@@ -25,10 +24,12 @@ env._max_episode_steps : 200
 env.unwrapped : gym.envs.classic_control.cartpole.CartPoleEnv
 '''
 
+env = gym.make("CartPole-v0").unwrapped
+state, info = env.reset()
 
 NUM_ACTIONS = env.action_space.n
 NUM_STATES = env.observation_space.shape[0]
-ENV_A_SHAPE = 0 if isinstance(env.action_space.sample(), int) else env.action_space.sample.shape
+ENV_A_SHAPE = env.action_space.shape
 
 class Net(nn.Module):
     """docstring for Net"""
@@ -70,12 +71,11 @@ class DQN():
         state = torch.unsqueeze(torch.FloatTensor(state), 0) # get a 1D array
         if np.random.randn() <= EPISILO: # greedy policy
             action_value = self.eval_net.forward(state)
-            action = torch.max(action_value, 1)[1].data.numpy()
+            action = torch.max(action_value, 1)[1].data.numpy() #
             # max return value and index ,the index is the action
-            action = action[0] if ENV_A_SHAPE == 0 else action.reshape(ENV_A_SHAPE)
+            action = action[0]
         else: # random policy
             action = np.random.randint(0,NUM_ACTIONS)
-            action = action if ENV_A_SHAPE == 0 else action.reshape(ENV_A_SHAPE)
         return action
 
 
@@ -168,19 +168,24 @@ def main():
     reward_list = []
 
     for i in range(episodes):
-        state = env.reset()
+        state, info = env.reset()
         ep_reward = 0
         while True:
             env.render()
             action = dqn.choose_action(state)
+
             next_state, reward,  done , truncated , _  = env.step(action)
             position, velocity ,pos_angle, v_angle = next_state
-            # reward = reward_func(env, position, velocity ,pos_angle, v_angle)
+            reward = reward_func(env, position, velocity ,pos_angle, v_angle)
 
             dqn.store_transition(state, action, reward, next_state)
             ep_reward += reward
 
             if dqn.memory_counter >= MEMORY_CAPACITY:
+                """
+                只有exp池中transition 数量足够多之后,才会开始进行学习
+                
+                """
                 dqn.learn()
                 if done:
                     print("episode: {} , the episode reward is {}".format(i, round(ep_reward, 3)))

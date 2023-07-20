@@ -1,4 +1,5 @@
-import gym, os
+import gymnasium as gym
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 from itertools import count
@@ -14,7 +15,7 @@ from torch.distributions import Categorical
 env = gym.make('CartPole-v0')
 env = env.unwrapped
 
-env.seed(1)
+env.action_space.seed(1)
 torch.manual_seed(1)
 
 state_space = env.observation_space.shape[0]
@@ -104,9 +105,11 @@ def finish_episode():
         reward = r - value.item() # 基于蒙特卡洛方法的Advantage function ,rt <->v(st)
 
         # r(t) - V(St) : V(St)理解为出现St时,平均得到的分数,r是采取a(t)后最后得到的分数
-        # 用这个作为实际的reward
+        # r(t) is can see as V(St,a)
+        # Here V(St) see as Critic
+        # 用这个作为实际的reward : Training Actor
         policy_loss.append( - log_prob * reward )
-
+        # Training Critic
         value_loss.append(F.smooth_l1_loss(value, torch.tensor([r])))
 
 
@@ -122,7 +125,7 @@ def main():
     running_reward = 10
     live_time = []
     for i_episode in count(episodes):
-        state = env.reset()
+        state ,info = env.reset()
         for t in count():
             action = select_action(state)
 
@@ -133,7 +136,7 @@ def main():
 
             if done  or t >= 1000:
                 break
-        running_reward = running_reward * 0.99 + t * 0.01
+        # running_reward = running_reward * 0.99 + t * 0.01
         live_time.append(t)
         plot(live_time)
         # if i_episode % 100 == 0:

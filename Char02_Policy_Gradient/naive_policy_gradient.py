@@ -1,5 +1,5 @@
 import numpy as np
-import gym
+import gymnasium as gym
 import matplotlib.pyplot as plt
 from itertools import count
 
@@ -9,7 +9,10 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 from torch.distributions import Categorical
 
+"""
+Maybe you should see PolicyGradient.py directly 
 
+"""
 #Hyperparameters
 learning_rate = 0.01
 gamma = 0.98
@@ -77,7 +80,7 @@ def train():
     steps = 0
 
     for episode in range(num_episode):
-        state = env.reset()
+        state,info = env.reset()
         state = torch.from_numpy(state).float()
         state = Variable(state)
 

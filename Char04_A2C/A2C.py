@@ -2,7 +2,7 @@
 import math
 import random
 
-import gym
+import gymnasium as gym
 import numpy as np
 
 import torch
@@ -51,14 +51,14 @@ class ActorCritic(nn.Module):
         )
         
     def forward(self, x):
-        value = self.critic(x)
-        probs = self.actor(x)
+        value = self.critic(x) # V(S)
+        probs = self.actor(x) # pro of action
         dist  = Categorical(probs)
         return dist, value
 
 
 def test_env(vis=False):
-    state = env.reset()
+    state , info  = env.reset()
     if vis: env.render()
     done = False
     total_reward = 0
@@ -73,7 +73,7 @@ def test_env(vis=False):
 
 
 def compute_returns(next_value, rewards, masks, gamma=0.99):
-    R = next_value
+    R = next_value # V(St+n+1)
     returns = []
     for step in reversed(range(len(rewards))):
         R = rewards[step] + gamma * R * masks[step]
@@ -103,7 +103,7 @@ frame_idx    = 0
 test_rewards = []
 
 
-state = envs.reset()
+state , info = envs.reset()
 
 while frame_idx < max_frames:
 
@@ -122,7 +122,7 @@ while frame_idx < max_frames:
         next_state, reward, done, _ = envs.step(action.cpu().numpy())
 
         log_prob = dist.log_prob(action)
-        entropy += dist.entropy().mean()
+        entropy += dist.entropy().mean() # collect entropy for diverse aciton
         
         log_probs.append(log_prob)
         values.append(value)
@@ -138,13 +138,17 @@ while frame_idx < max_frames:
             
     next_state = torch.FloatTensor(next_state).to(device)
     _, next_value = model(next_state)
+    # next_value see as V(st+n+1)
+    # so here using the MC and Advantage at the same time
+    # Original Advantage Actor Critic is just 1 step out
+    # that is rt + V(st+1) - V(st) as reward(weight) of P(at|st)
     returns = compute_returns(next_value, rewards, masks)
     
     log_probs = torch.cat(log_probs)
     returns   = torch.cat(returns).detach()
     values    = torch.cat(values)
 
-    advantage = returns - values
+    advantage = returns - values # r(t) - V(St)
 
     actor_loss  = -(log_probs * advantage.detach()).mean()
     critic_loss = advantage.pow(2).mean()

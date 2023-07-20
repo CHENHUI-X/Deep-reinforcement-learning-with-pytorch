@@ -4,7 +4,7 @@ from itertools import count
 import os, sys, random
 import numpy as np
 
-import gym
+import gymnasium as gym
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

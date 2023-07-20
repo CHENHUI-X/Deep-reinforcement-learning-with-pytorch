@@ -1,6 +1,6 @@
 
 import argparse
-import gym
+import gymnasium as gym
 import numpy as np
 from itertools import count
 
@@ -11,7 +11,10 @@ import torch.optim as optim
 import matplotlib.pyplot as plt
 from torch.distributions import Categorical
 
+'''
+Maybe this file should name "naive policy gradient"
 
+'''
 
 parser = argparse.ArgumentParser(description='PyTorch REINFORCE example')
 parser.add_argument('--gamma', type=float, default=0.99, metavar='G',
@@ -26,7 +29,9 @@ args = parser.parse_args()
 
 
 env = gym.make('CartPole-v0')
-env.seed(args.seed)
+
+env.action_space.seed(args.seed)
+
 torch.manual_seed(args.seed)
 
 
@@ -86,7 +91,7 @@ def finish_episode():
 def main():
     running_reward = 10
     for i_episode in count(1): # 无限循环
-        state = env.reset()
+        state , info = env.reset()
         for t in range(100):
             # Don't infinite loop while learning
             action = select_action(state)
